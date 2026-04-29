@@ -2,7 +2,6 @@ package com.tp2.sync;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
@@ -10,7 +9,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-
 public class BranchPublisher {
     private static final String SELECT_PENDING_SQL = """
             SELECT id, product_code, quantity, unit_price, sold_at, office
@@ -59,9 +57,8 @@ public class BranchPublisher {
     }
 
     private static void publishRows(AppConfig config, String branchKey, List<SaleRecord> rows) throws Exception {
-        ConnectionFactory factory = config.rabbitFactory();
         String queueName = config.queueNameForOffice(branchKey);
-        try (Connection rabbitConn = factory.newConnection();
+        try (Connection rabbitConn = config.rabbitFactory().newConnection();
              Channel channel = rabbitConn.createChannel()) {
             channel.queueDeclare(queueName, true, false, false, null);
             for (SaleRecord row : rows) {

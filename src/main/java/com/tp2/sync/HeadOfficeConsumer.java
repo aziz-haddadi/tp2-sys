@@ -2,7 +2,6 @@ package com.tp2.sync;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
 
 import java.nio.charset.StandardCharsets;
@@ -22,19 +21,18 @@ public class HeadOfficeConsumer {
 
     public static void main(String[] args) throws Exception {
         AppConfig config = new AppConfig();
-        ConnectionFactory factory = config.rabbitFactory();
 
-        try (Connection rabbitConn = factory.newConnection();
+        try (Connection rabbitConn = config.rabbitFactory().newConnection();
              Channel channel = rabbitConn.createChannel()) {
             String queueBo1 = config.queueNameForOffice("bo1");
             String queueBo2 = config.queueNameForOffice("bo2");
             channel.queueDeclare(queueBo1, true, false, false, null);
             channel.queueDeclare(queueBo2, true, false, false, null);
 
-            DeliverCallback callback = (consumerTag, delivery) -> {
+            DeliverCallback callback = (tag, delivery) -> {
                 String payload = new String(delivery.getBody(), StandardCharsets.UTF_8);
-                SaleRecord record = SaleRecord.fromMessage(payload);
-                persistInHeadOffice(config, record);
+                SaleRecord sale = SaleRecord.fromMessage(payload);
+                persistInHeadOffice(config, sale);
                 System.out.println("Synced to HO: " + payload);
             };
 
@@ -46,15 +44,15 @@ public class HeadOfficeConsumer {
         }
     }
 
-    private static void persistInHeadOffice(AppConfig config, SaleRecord record) {
+    private static void persistInHeadOffice(AppConfig config, SaleRecord sale) {
         try (java.sql.Connection db = config.openDbConnection("ho");
              PreparedStatement ps = db.prepareStatement(UPSERT_SQL)) {
-            ps.setString(1, record.office());
-            ps.setLong(2, record.id());
-            ps.setString(3, record.productCode());
-            ps.setInt(4, record.quantity());
-            ps.setBigDecimal(5, record.unitPrice());
-            ps.setTimestamp(6, Timestamp.valueOf(record.soldAt()));
+            ps.setString(1, sale.office());
+            ps.setLong(2, sale.id());
+            ps.setString(3, sale.productCode());
+            ps.setInt(4, sale.quantity());
+            ps.setBigDecimal(5, sale.unitPrice());
+            ps.setTimestamp(6, Timestamp.valueOf(sale.soldAt()));
             ps.executeUpdate();
         } catch (Exception e) {
             throw new RuntimeException("Failed to persist record in HO", e);
