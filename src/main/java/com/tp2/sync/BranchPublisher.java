@@ -11,12 +11,17 @@ import java.util.ArrayList;
 import java.util.List;
 public class BranchPublisher {
     private static final String SELECT_PENDING_SQL = """
-            SELECT id, product_code, quantity, unit_price, sold_at, office
-            FROM sales
+            SELECT `date`, region, product, qty, cost, amt, tax, total
+            FROM product_sales
             WHERE synced = 0
-            ORDER BY id
+            ORDER BY `date`, region, product
             """;
-    private static final String MARK_SYNCED_SQL = "UPDATE sales SET synced = true WHERE id = ?";
+    private static final String MARK_SYNCED_SQL = """
+            UPDATE product_sales
+            SET synced = true
+            WHERE `date` = ? AND region = ? AND product = ? AND qty = ? AND cost = ? AND amt = ? AND tax = ? AND total = ? AND synced = 0
+            LIMIT 1
+            """;
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1 || (!args[0].equals("bo1") && !args[0].equals("bo2"))) {
@@ -44,12 +49,14 @@ public class BranchPublisher {
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 rows.add(new SaleRecord(
-                        rs.getLong("id"),
-                        rs.getString("product_code"),
-                        rs.getInt("quantity"),
-                        rs.getBigDecimal("unit_price"),
-                        rs.getTimestamp("sold_at").toLocalDateTime(),
-                        rs.getString("office")
+                        rs.getDate("date").toLocalDate(),
+                        rs.getString("region"),
+                        rs.getString("product"),
+                        rs.getInt("qty"),
+                        rs.getBigDecimal("cost"),
+                        rs.getBigDecimal("amt"),
+                        rs.getBigDecimal("tax"),
+                        rs.getBigDecimal("total")
                 ));
             }
         }
@@ -73,7 +80,14 @@ public class BranchPublisher {
             db.setAutoCommit(false);
             try (PreparedStatement update = db.prepareStatement(MARK_SYNCED_SQL)) {
                 for (SaleRecord row : rows) {
-                    update.setLong(1, row.id());
+                    update.setDate(1, java.sql.Date.valueOf(row.date()));
+                    update.setString(2, row.region());
+                    update.setString(3, row.product());
+                    update.setInt(4, row.qty());
+                    update.setBigDecimal(5, row.cost());
+                    update.setBigDecimal(6, row.amt());
+                    update.setBigDecimal(7, row.tax());
+                    update.setBigDecimal(8, row.total());
                     update.addBatch();
                 }
                 update.executeBatch();

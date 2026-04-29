@@ -32,6 +32,41 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>ho</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.tp2.sync.HeadOfficeConsumer</mainClass>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>bo1</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.tp2.sync.BranchPublisher</mainClass>
+                            <arguments>
+                                <argument>bo1</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>bo2</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.tp2.sync.BranchPublisher</mainClass>
+                            <arguments>
+                                <argument>bo2</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

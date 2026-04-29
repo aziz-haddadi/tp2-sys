@@ -6,17 +6,11 @@ import com.rabbitmq.client.DeliverCallback;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
-import java.sql.Timestamp;
 
 public class HeadOfficeConsumer {
-    private static final String UPSERT_SQL = """
-            INSERT INTO sales_aggregated (source_office, source_sale_id, product_code, quantity, unit_price, sold_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                product_code = VALUES(product_code),
-                quantity = VALUES(quantity),
-                unit_price = VALUES(unit_price),
-                sold_at = VALUES(sold_at)
+    private static final String INSERT_SQL = """
+            INSERT INTO product_sales (`date`, region, product, qty, cost, amt, tax, total)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
     public static void main(String[] args) throws Exception {
@@ -46,13 +40,15 @@ public class HeadOfficeConsumer {
 
     private static void persistInHeadOffice(AppConfig config, SaleRecord sale) {
         try (java.sql.Connection db = config.openDbConnection("ho");
-             PreparedStatement ps = db.prepareStatement(UPSERT_SQL)) {
-            ps.setString(1, sale.office());
-            ps.setLong(2, sale.id());
-            ps.setString(3, sale.productCode());
-            ps.setInt(4, sale.quantity());
-            ps.setBigDecimal(5, sale.unitPrice());
-            ps.setTimestamp(6, Timestamp.valueOf(sale.soldAt()));
+             PreparedStatement ps = db.prepareStatement(INSERT_SQL)) {
+            ps.setDate(1, java.sql.Date.valueOf(sale.date()));
+            ps.setString(2, sale.region());
+            ps.setString(3, sale.product());
+            ps.setInt(4, sale.qty());
+            ps.setBigDecimal(5, sale.cost());
+            ps.setBigDecimal(6, sale.amt());
+            ps.setBigDecimal(7, sale.tax());
+            ps.setBigDecimal(8, sale.total());
             ps.executeUpdate();
         } catch (Exception e) {
             throw new RuntimeException("Failed to persist record in HO", e);
